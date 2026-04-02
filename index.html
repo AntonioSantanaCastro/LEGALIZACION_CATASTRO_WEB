@@ -1,1 +1,1077 @@
+<html>
+<head>
+<title>Mapa Catastro por Años</title>
+<meta charset="UTF-8">
 
+<!-- RESPONSIVE -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet.fullscreen@latest/Control.FullScreen.css"/>
+<script src="https://unpkg.com/leaflet.fullscreen@latest/Control.FullScreen.js"></script>
+
+<style>
+
+body{
+background:#d2e2f7;
+margin:10px;
+font-family:Arial;
+  
+}
+
+/* LOGO */
+
+.logo-manta{
+position:absolute;
+left:20px;
+top:5px;
+width:120px;
+z-index:1000;
+}
+
+/* TITULO */
+
+.titulo{
+text-align:center;
+line-height:0.5;
+}
+
+/* MAPA RESPONSIVO */
+
+#mapa{
+width:100%;
+height:75vh;
+border:2px solid #004bad;
+}
+
+/* CONTROL HISTORICO */
+
+#controlTiempo{
+position:absolute;
+bottom:15px;
+left:20px;
+background:white;
+padding:10px;
+border-radius:8px;
+box-shadow:0 0 5px gray;
+z-index:1000;
+font-weight:bold;
+max-width:260px;
+}
+
+/* BUSCADOR */
+
+#buscadorPredio{
+position:absolute;
+bottom:5px;
+right:110px;
+background:white;
+padding:10px;
+border-radius:8px;
+box-shadow:0 0 5px gray;
+z-index:1000;
+font-weight:bold;
+max-width:260px;
+}
+
+#buscadorPredio input{
+width:100%;
+margin-top:5px;
+}
+
+#buscadorPredio button{
+margin-top:5px;
+width:100%;
+}
+
+/* SLIDER */
+
+#controlTiempo input{
+width:100%;
+}
+
+/* LEYENDA */
+
+.legend{
+font-size:10px;
+}
+
+/* ===== CELULARES ===== */
+
+@media (max-width:768px){
+
+.logo-manta{
+width:90px;
+left:10px;
+}
+
+h4{
+font-size:12px;
+}
+
+#mapa{
+height:65vh;
+}
+
+#controlTiempo{
+left:10px;
+bottom:10px;
+font-size:12px;
+padding:8px;
+max-width:180px;
+}
+
+#buscadorPredio{
+right:10px;
+bottom:10px;
+font-size:12px;
+padding:8px;
+max-width:180px;
+}
+
+}
+
+.labelParroquia{
+background: transparent !important;
+border: none !important;
+box-shadow: none !important;
+color: blue;
+font-size: 10px;
+
+}
+
+
+</style>
+</head>
+
+<body>
+
+<div class="titulo">
+<h4>GOBIERNO AUTÓNOMO DESCENTRALIZADO DEL CANTÓN MANTA</h4>
+<h4>UNIDAD DE GESTIÓN Y TITULARIZACIÓN DE TIERRAS</h4>
+
+<img src="imagenmanta.png" class="logo-manta">
+</div>
+
+<div id="mapa"></div>
+
+
+<button id="btnAdmin" style="
+display:none;
+position:fixed;
+top:10px;
+right:10px;
+z-index:2000;
+padding:8px;
+background:#004bad;
+color:white;
+border:none;
+border-radius:5px;
+cursor:pointer;
+">
+Generar Link
+</button>
+
+<div id="controlTiempo">
+Año: <span id="valorAnio"></span>
+<br>
+<input type="range" min="2019" max="2026" value="2019" step="1"
+oninput="actualizarAnio(this.value)">
+<br>
+<span id="conteoPredios">Mover barra para iniciar</span>
+</div>
+
+<div id="buscadorPredio">
+
+Buscar Predio<br>
+
+<input type="text" id="textoBuscar" placeholder="Clave, propietario o cédula">
+
+<button onclick="buscarPredio()">Buscar</button>
+
+<button onclick="iniciarVoz()">🎤 Hablar</button>
+
+</div>
+
+<script>
+
+
+// ================= MODO ADMIN CORREGIDO =================
+
+
+window.addEventListener("load", function(){
+
+  var params = new URLSearchParams(window.location.search);
+
+  var token = params.get("token");
+  var fechaExp = params.get("exp");
+  var adminModo = params.get("admin");
+
+  var TOKEN_VALIDO = "ABC123";
+  var btn = document.getElementById("btnAdmin");
+
+  // 🟢 1. ADMIN DIRECTO (PRIORIDAD MÁXIMA)
+  if(adminModo === "1"){
+    if(btn) btn.style.display = "block";
+    return;
+  }
+
+  // 🟢 2. ACCESO POR LINK
+  if(token){
+
+  if(token !== TOKEN_VALIDO){
+    document.body.innerHTML = "🔒 Token inválido";
+    return;
+  }
+
+  if(fechaExp){
+    var ahora = new Date();
+    var limite = new Date(fechaExp);
+
+    if(ahora > limite){
+      document.body.innerHTML = "⛔ Link expirado";
+      return;
+    }
+  }
+
+  // 🔥 OCULTAR PARÁMETROS (aquí va)
+  setTimeout(function(){
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }, 10);
+
+  if(btn) btn.style.display = "none";
+  return;
+}
+
+  // 🔐 3. MODO ADMIN NORMAL
+  var clave = prompt("Ingrese clave de administrador");
+
+  if(clave === "Manta2026"){
+    if(btn) btn.style.display = "block";
+  }else{
+    document.body.innerHTML = "<h2 style='text-align:center;margin-top:50px;color:red;'>🔒 Acceso restringido</h2>";
+  }
+
+});
+
+
+
+
+/* TODO TU SCRIPT ORIGINAL VA AQUÍ
+NO SE MODIFICA NADA */
+// CAPAS BASE
+
+var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+
+var googleMaps = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+maxZoom:20,
+subdomains:['mt0','mt1','mt2','mt3']
+});
+
+var googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',{
+maxZoom:25	,
+subdomains:['mt0','mt1','mt2','mt3'],
+opacity:0.6
+});
+
+// MAPA
+
+var map = L.map("mapa",{
+center:[-0.999491,-80.761089],
+zoom:14,
+layers:[googleHybrid],
+fullscreenControl:true
+});
+
+// CONTROL CAPAS BASE
+
+var baseMaps = {
+"Open Street Maps": osm,
+"Google Maps": googleMaps,
+"Google Hybrid": googleHybrid
+};
+
+L.control.layers(baseMaps).addTo(map);
+
+
+// FUNCION CAPA CATASTRO
+
+function crearCapa(datos,relleno,contorno){
+
+return L.geoJson(datos,{
+
+style:function(){
+return{
+color:contorno,
+weight:2,
+fillColor:relleno,
+fillOpacity:0.5
+}
+},
+
+onEachFeature: function (feature, capa){console.log(feature.properties);
+
+capa.bindPopup("<strong>Clave Catastral: </strong>"+ feature.properties['clavecatas'] + "<br>" +
+"<strong>Zona: </strong>"+ feature.properties['zona'] + "<br>" +
+"<strong>Sector: </strong>"+ feature.properties['sector']+ "<br>" +
+"<strong>Manzana: </strong>"+ feature.properties['manzana']+ "<br>" +
+"<strong>Lote: </strong>"+ feature.properties['lote'] + "<br>" +
+"<strong>Propietario: </strong>"+ feature.properties['propietari']+ "<br>" +
+"<strong>Cedula: </strong>"+ feature.properties['documentop']+ "<br>" +			   
+"<strong>Dirección: </strong>"+ feature.properties['direccion'] + "<br>" +
+"<strong>Área: </strong>"+ feature.properties['area_m2']+ "<br>" +
+"<strong>Zona: </strong>"+ feature.properties['zonaurbano']+ "<br>" +
+"<strong>Parroquia: </strong>"+ feature.properties['parroquia']+ "<br>" +
+"<strong>Barrio: </strong>"+ feature.properties['barrio']+ "<br>" +
+"<strong>Resolución: </strong>"+ feature.properties['RESOLUCION']+ "<br>" +
+"<strong>Observación: </strong>"+ feature.properties['observacio']
+
+);
+
+// MOUSE SOBRE PREDIO
+
+capa.on("mouseover",function(){
+
+//map.dragging.disable();
+
+this.setStyle({
+color:'red',
+weight:4,
+fillOpacity:0.9
+});
+
+this.openPopup();
+
+});
+
+// SALIR DEL PREDIO
+
+capa.on("mouseout",function(){
+//map.dragging.enable();
+
+this.setStyle({
+color:contorno,
+weight:2,
+fillColor:relleno,
+fillOpacity:0.5
+});
+
+this.closePopup();
+
+});
+
+}
+
+});
+
+}
+
+
+// VARIABLES
+
+var capa2019,capa2020,capa2021,capa2022,capa2023,capa2024,capa2025;
+
+
+// MOSTRAR CAPAS
+
+function mostrarCapa(anio){
+
+[capa2019,capa2020,capa2021,capa2022,capa2023,capa2024,capa2025].forEach(function(c){
+
+if(c && map.hasLayer(c)){
+map.removeLayer(c);
+}
+
+});
+
+if(anio==2019 && capa2019) map.addLayer(capa2019);
+if(anio==2020 && capa2020) map.addLayer(capa2020);
+if(anio==2021 && capa2021) map.addLayer(capa2021);
+if(anio==2022 && capa2022) map.addLayer(capa2022);
+if(anio==2023 && capa2023) map.addLayer(capa2023);
+if(anio==2024 && capa2024) map.addLayer(capa2024);
+if(anio==2025 && capa2025) map.addLayer(capa2025);
+
+if(anio==2026){
+
+if(capa2019) map.addLayer(capa2019);
+if(capa2020) map.addLayer(capa2020);
+if(capa2021) map.addLayer(capa2021);
+if(capa2022) map.addLayer(capa2022);
+if(capa2023) map.addLayer(capa2023);
+if(capa2024) map.addLayer(capa2024);
+if(capa2025) map.addLayer(capa2025);
+
+}
+
+}
+
+function actualizarAnio(anio){
+
+if(anio==2026){
+document.getElementById("valorAnio").innerHTML="TODOS";
+}else{
+document.getElementById("valorAnio").innerHTML=anio;
+}
+
+mostrarCapa(anio);
+
+}
+
+
+// CARGAR CAPAS
+
+function cargar(url,color,borde,variable){
+
+fetch(url)
+.then(r=>r.json())
+.then(data=>{
+window[variable]=crearCapa(data,color,borde)
+
+})
+
+}
+
+cargar("https://raw.githubusercontent.com/Antonio20252025/Catastro_Legalizacion/main/2019.geojson","yellow","blue","capa2019")
+cargar("https://raw.githubusercontent.com/Antonio20252025/Catastro_Legalizacion/main/2020.geojson","violet","purple","capa2020")
+cargar("https://raw.githubusercontent.com/Antonio20252025/Catastro_Legalizacion/main/2021.geojson","blue","orange","capa2021")
+cargar("https://raw.githubusercontent.com/Antonio20252025/Catastro_Legalizacion/main/2022.geojson","pink","red","capa2022")
+cargar("https://raw.githubusercontent.com/Antonio20252025/Catastro_Legalizacion/main/2023.geojson","darkblue","cyan","capa2023")
+cargar("https://raw.githubusercontent.com/Antonio20252025/Catastro_Legalizacion/main/2024.geojson","sandybrown","Magenta","capa2024")
+cargar("https://raw.githubusercontent.com/Antonio20252025/Catastro_Legalizacion/main/2025.geojson","white","yellow","capa2025")
+
+
+// PARPADEO
+
+function activarParpadeo(){
+
+var estado=true;
+
+setInterval(function(){
+
+[capa2019,capa2020,capa2021,capa2022,capa2023,capa2024,capa2025].forEach(function(capa){
+
+if(capa){
+
+capa.eachLayer(function(layer){
+
+if(estado){
+layer.setStyle({fillOpacity:0.1,opacity:0.3});
+}else{
+layer.setStyle({fillOpacity:0.6,opacity:1});
+}
+
+});
+
+}
+
+});
+
+estado=!estado;
+
+},300);
+
+}
+
+activarParpadeo();
+
+
+// BUSCAR PREDIO
+
+function buscarPredio(){
+
+var texto=document.getElementById("textoBuscar").value.toLowerCase();
+
+var capas=[capa2019,capa2020,capa2021,capa2022,capa2023,capa2024,capa2025];
+
+// RESTAURAR ESTILO ORIGINAL
+capas.forEach(function(capa){
+
+if(capa){
+
+capa.eachLayer(function(layer){
+
+capa.resetStyle(layer);
+
+});
+
+}
+
+});
+
+
+// BUSCAR PREDIO
+capas.forEach(function(capa){
+
+if(capa){
+
+capa.eachLayer(function(layer){
+
+var p=layer.feature.properties;
+
+if(
+(p.clavecatas && p.clavecatas.toLowerCase().includes(texto)) ||
+(p.propietari && p.propietari.toLowerCase().includes(texto)) ||
+(p.documentop && p.documentop.toLowerCase().includes(texto))
+){
+
+map.fitBounds(layer.getBounds());
+
+layer.setStyle({
+color:'red',
+weight:4,
+fillColor:'red',
+fillOpacity:0.9
+});
+
+layer.openPopup();
+
+}
+
+});
+
+}
+
+});
+
+}
+
+function iniciarVoz(){
+
+  // Verificar compatibilidad
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if(!SpeechRecognition){
+    alert("Tu navegador no soporta reconocimiento de voz");
+    return;
+  }
+
+  var reconocimiento = new SpeechRecognition();
+
+  reconocimiento.lang = "es-EC"; // español
+  reconocimiento.interimResults = false;
+  reconocimiento.maxAlternatives = 1;
+
+  reconocimiento.start();
+
+  reconocimiento.onresult = function(event){
+
+    var texto = event.results[0][0].transcript;
+	
+	console.log("Texto detectado:", texto); // 👈 AGREGA ESTO
+
+	    // 👇 REEMPLAZOS PERSONALIZADOS
+  texto = texto
+    .replace(/raya/g, "-")
+    .replace(/guion/g, "-")
+    .replace(/guión/g, "-")
+    .replace(/slash/g, "/")
+    .replace(/barra/g, "/")
+    .replace(/punto/g, ".")
+    .replace(/coma/g, ",")
+    .replace(/espacio/g, " ")
+    .replace(/guion bajo/g, "_");
+
+	
+    // poner lo hablado en el input
+    document.getElementById("textoBuscar").value = texto;
+
+    // ejecutar búsqueda automáticamente
+    buscarPredio();
+
+  };
+
+  reconocimiento.onerror = function(event){
+    console.log("Error voz:", event.error);
+    alert("Error en reconocimiento de voz");
+  };
+
+}
+
+// ================= CAPAS ADMINISTRATIVAS =================
+
+// grupo para controlar orden
+var grupoLimites = L.layerGroup().addTo(map);
+
+function capaLimite(datos,color){
+
+return L.geoJson(datos,{
+
+style:{
+color:color,
+weight:4,
+opacity:1,
+fillOpacity:0
+},
+
+onEachFeature:function(feature,layer){
+
+// mostrar nombre si existe
+if(feature.properties){
+
+var nombre =
+feature.properties.nombre ||
+feature.properties.NOMBRE ||
+feature.properties.parroquia ||
+feature.properties.barrio ||
+"";
+
+if(nombre!=""){
+layer.bindTooltip(nombre,{
+permanent:false,
+direction:"center",
+className:"labelLimite"
+});
+}
+
+}
+
+}
+
+});
+
+}
+
+
+// LIMITE CANTONAL
+//fetch("https://raw.githubusercontent.com/Antonio20252025/Catastro_BD_Legalizacion/refs/heads/main/Limite_Cantonal.geojson")
+//.then(r=>r.json())
+//.then(data=>{
+
+//var cantonal = capaLimite(data,"black");
+//grupoLimites.addLayer(cantonal);
+
+//});
+
+
+// LIMITES BARRIALES
+//fetch("https://raw.githubusercontent.com/Antonio20252025/Catastro_BD_Legalizacion/refs/heads/main/Limites_Barriales.geojson")
+//.then(r=>r.json())
+//.then(data=>{
+
+//var barrial = capaLimite(data,"red");
+//grupoLimites.addLayer(barrial);
+
+//});
+
+// COLORES AUTOMÁTICOS
+function getColorParroquia(i){
+var colores = [
+"#fde0dd", // rosado suave
+"#e0ecf4", // azul muy claro
+"#e6f5d0", // verde suave
+"#fff2ae", // amarillo suave
+"#f1e2cc", // beige
+"#d9f0f3", // celeste suave
+"#fddbc7", // salmón claro
+"#e7d4e8", // lila claro
+"#ccebc5", // verde pastel
+"#fbb4ae", // rosado claro
+"#b3cde3", // azul pastel
+"#decbe4", // lavanda
+"#fed9a6", // naranja pastel
+"#ffffcc", // amarillo pálido
+"#e5d8bd"  // tierra claro
+];
+return colores[i % colores.length];
+}
+
+// PARROQUIAS
+fetch("https://raw.githubusercontent.com/Antonio20252025/Catastro_BD_Legalizacion/refs/heads/main/Parroquias_Urbanas_y_Rurales.geojson")
+.then(r=>r.json())
+.then(data=>{
+
+// guardar colores por parroquia
+var coloresParroquia = {};
+var i = 0;
+
+var parroquias = L.geoJson(data,{
+
+style:function(feature){
+
+var nombre = (
+feature.properties.parroquia ||
+feature.properties.nombre ||
+feature.properties.name ||
+feature.properties.NOMBRE ||
+"sin_nombre"
+).toString().trim().toUpperCase();
+
+// si no tiene color asignado, se le da uno
+if(!coloresParroquia[nombre]){
+coloresParroquia[nombre] = getColorParroquia(i++);
+}
+
+return{
+color:"#333",
+weight:1.5,
+dashArray:"10,15",
+fillColor:coloresParroquia[nombre], // 👈 color fijo por parroquia
+fillOpacity:0.30,
+opacity:0.9
+}
+
+},
+
+onEachFeature:function(feature,layer){
+
+var nombre =
+feature.properties.name ||
+feature.properties.nombre ||
+feature.properties.NOMBRE ||
+feature.properties.parroquia ||
+"";
+
+if(nombre!=""){
+
+// TEXTO FIJO SIEMPRE VISIBLE
+layer.bindTooltip(nombre,{
+permanent:true,
+direction:"center",
+className:"labelParroquia"
+});
+
+}
+
+}
+
+});
+
+grupoLimites.addLayer(parroquias);
+
+});
+
+// --------- AGREGADO PARA MOSTRAR CANTIDAD DE PREDIOS POR AÑO ---------
+
+var prediosPorAnio={
+2019:287,
+2020:307,
+2021:1048,
+2022:339,
+2023:524,
+2024:793,
+2025:455,
+2026:3753
+};
+
+var actualizarAnioOriginal = actualizarAnio;
+
+actualizarAnio=function(anio){
+  actualizarAnioOriginal(anio);
+  if(anio==2026){
+    document.getElementById("conteoPredios").innerHTML="TOTAL → 3753 Predios";
+  }else{
+    document.getElementById("conteoPredios").innerHTML=anio+" → "+prediosPorAnio[anio]+" Predios";
+  }
+};
+
+// ------------------ LEYENDA ------------------
+var leyenda = L.control({position: 'bottomright'});
+
+leyenda.onAdd = function(map){
+  var div = L.DomUtil.create('div','info legend');
+  div.style.background = 'white';
+  div.style.padding = '10px';
+  div.style.borderRadius = '8px';
+  div.style.boxShadow = '0 0 5px gray';
+  div.innerHTML = '<h3>Simbología</h3>';
+  
+  // Lista de años y colores de contorno
+  var años = [2019,2020,2021,2022,2023,2024,2025];
+  var colores = ['blue','purple','orange','red','cyan','Magenta','yellow'];
+  
+  for(var i=0; i<años.length; i++){
+    div.innerHTML +=
+      '<i style="background:'+colores[i]+'; width:18px; height:18px; display:inline-block; margin-right:5px;"></i> ' +
+      años[i] + '<br>';
+  }
+  
+  return div;
+}
+
+leyenda.addTo(map);
+// -------- INVERTIR HISTÓRICO 2025 → 2019 SIN MODIFICAR CÓDIGO ORIGINAL --------
+
+// obtener el slider
+var sliderTiempo = document.querySelector("#controlTiempo input");
+
+// invertir rango
+sliderTiempo.min = 2019;
+sliderTiempo.max = 2025;
+sliderTiempo.step = 1;
+sliderTiempo.value = 2025;
+
+// cambiar comportamiento del control
+sliderTiempo.oninput = function(){
+
+var anio = parseInt(this.value);
+
+// invertir visualmente el año
+var anioInvertido = 2025 - (anio - 2019);
+
+// actualizar etiqueta
+document.getElementById("valorAnio").innerHTML = anioInvertido;
+
+// mostrar capa
+mostrarCapa(anioInvertido);
+
+};
+
+// -------- CONTROL HISTORICO PERSONALIZADO --------
+
+// obtener slider
+var slider = document.querySelector("#controlTiempo input");
+
+// cambiar rango del control
+slider.min = 0;
+slider.max = 8;
+slider.step = 1;
+slider.value = 0;
+
+// función personalizada
+slider.oninput = function(){
+
+var v = parseInt(this.value);
+
+// quitar capas
+[capa2019,capa2020,capa2021,capa2022,capa2023,capa2024,capa2025].forEach(function(c){
+if(c && map.hasLayer(c)){
+map.removeLayer(c);
+}
+});
+
+// POSICION 0 → SIN DATOS
+if(v==0){
+document.getElementById("valorAnio").innerHTML="";
+document.getElementById("conteoPredios").innerHTML="Mover barra para iniciar";
+}
+
+// 2025
+if(v==1){
+document.getElementById("valorAnio").innerHTML="2025";
+mostrarCapa(2025);
+}
+
+// 2024
+if(v==2){
+document.getElementById("valorAnio").innerHTML="2024";
+mostrarCapa(2024);
+}
+
+// 2023
+if(v==3){
+document.getElementById("valorAnio").innerHTML="2023";
+mostrarCapa(2023);
+}
+
+// 2022
+if(v==4){
+document.getElementById("valorAnio").innerHTML="2022";
+mostrarCapa(2022);
+}
+
+// 2021
+if(v==5){
+document.getElementById("valorAnio").innerHTML="2021";
+mostrarCapa(2021);
+}
+
+// 2020
+if(v==6){
+document.getElementById("valorAnio").innerHTML="2020";
+mostrarCapa(2020);
+}
+
+// 2019
+if(v==7){
+document.getElementById("valorAnio").innerHTML="2019";
+mostrarCapa(2019);
+}
+
+// TODOS LOS AÑOS
+if(v==8){
+
+if(capa2019) map.addLayer(capa2019);
+if(capa2020) map.addLayer(capa2020);
+if(capa2021) map.addLayer(capa2021);
+if(capa2022) map.addLayer(capa2022);
+if(capa2023) map.addLayer(capa2023);
+if(capa2024) map.addLayer(capa2024);
+if(capa2025) map.addLayer(capa2025);
+
+document.getElementById("valorAnio").innerHTML="TODOS";
+document.getElementById("conteoPredios").innerHTML="TOTAL → 3753 Predios";
+
+}
+
+};
+// ================= CONTROL HISTORICO FINAL =================
+
+// obtener slider original
+var slider = document.querySelector("#controlTiempo input");
+
+// redefinir rango
+slider.min = 0;
+slider.max = 8;
+slider.step = 1;
+slider.value = 0;
+
+
+// iniciar mapa en blanco
+window.addEventListener("load", function(){
+
+[capa2019,capa2020,capa2021,capa2022,capa2023,capa2024,capa2025].forEach(function(c){
+
+if(c && map.hasLayer(c)){
+map.removeLayer(c);
+}
+
+});
+
+document.getElementById("valorAnio").innerHTML="";
+document.getElementById("conteoPredios").innerHTML="Mover barra para iniciar";
+
+});
+
+// comportamiento del slider
+slider.oninput=function(){
+
+var v=parseInt(this.value);
+
+// quitar todas las capas
+[capa2019,capa2020,capa2021,capa2022,capa2023,capa2024,capa2025].forEach(function(c){
+if(c && map.hasLayer(c)){
+map.removeLayer(c);
+}
+});
+
+
+// SIN DATOS
+if(v==0){
+
+document.getElementById("valorAnio").innerHTML="";
+document.getElementById("conteoPredios").innerHTML="Mover barra para iniciar";
+
+}
+
+
+// 2025
+if(v==1){
+document.getElementById("valorAnio").innerHTML="2025";
+mostrarCapa(2025);
+document.getElementById("conteoPredios").innerHTML="2025 → "+prediosPorAnio[2025]+" Predios";
+}
+
+
+// 2024
+if(v==2){
+document.getElementById("valorAnio").innerHTML="2024";
+mostrarCapa(2024);
+document.getElementById("conteoPredios").innerHTML="2024 → "+prediosPorAnio[2024]+" Predios";
+}
+
+
+// 2023
+if(v==3){
+document.getElementById("valorAnio").innerHTML="2023";
+mostrarCapa(2023);
+document.getElementById("conteoPredios").innerHTML="2023 → "+prediosPorAnio[2023]+" Predios";
+}
+
+
+// 2022
+if(v==4){
+document.getElementById("valorAnio").innerHTML="2022";
+mostrarCapa(2022);
+document.getElementById("conteoPredios").innerHTML="2022 → "+prediosPorAnio[2022]+" Predios";
+}
+
+
+// 2021
+if(v==5){
+document.getElementById("valorAnio").innerHTML="2021";
+mostrarCapa(2021);
+document.getElementById("conteoPredios").innerHTML="2021 → "+prediosPorAnio[2021]+" Predios";
+}
+
+
+// 2020
+if(v==6){
+document.getElementById("valorAnio").innerHTML="2020";
+mostrarCapa(2020);
+document.getElementById("conteoPredios").innerHTML="2020 → "+prediosPorAnio[2020]+" Predios";
+}
+
+
+// 2019
+if(v==7){
+document.getElementById("valorAnio").innerHTML="2019";
+mostrarCapa(2019);
+document.getElementById("conteoPredios").innerHTML="2019 → "+prediosPorAnio[2019]+" Predios";
+}
+
+
+// TODOS LOS AÑOS
+if(v==8){
+
+if(capa2019) map.addLayer(capa2019);
+if(capa2020) map.addLayer(capa2020);
+if(capa2021) map.addLayer(capa2021);
+if(capa2022) map.addLayer(capa2022);
+if(capa2023) map.addLayer(capa2023);
+if(capa2024) map.addLayer(capa2024);
+if(capa2025) map.addLayer(capa2025);
+
+document.getElementById("valorAnio").innerHTML="TODOS";
+document.getElementById("conteoPredios").innerHTML="TOTAL → "+prediosPorAnio[2026]+" Predios";
+
+}
+
+};
+
+// BUSCAR CON ENTER
+document.getElementById("textoBuscar").addEventListener("keypress",function(e){
+
+if(e.key==="Enter"){
+buscarPredio();
+}
+
+});
+
+
+// ================= MODO ADMIN =================
+
+
+document.getElementById("btnAdmin").addEventListener("click", function(){
+
+  var minutos = prompt("¿Cuántos MINUTOS quieres que dure el link? (60 = 1 hora)");
+
+  if(!minutos) return;
+
+  minutos = parseInt(minutos);
+  if(isNaN(minutos) || minutos <= 0){
+    minutos = 60;
+  }
+
+  var ahora = new Date();
+  ahora.setMinutes(ahora.getMinutes() + minutos);
+
+  var fechaExp = ahora.toISOString();
+
+  var urlBase = window.location.origin + window.location.pathname;
+
+  var linkFinal = urlBase + "?exp=" + fechaExp + "&token=ABC123";
+
+  navigator.clipboard.writeText(linkFinal);
+
+  // 👉 AQUÍ VA
+  alert("Link válido por " + minutos + " minutos\n\n" + linkFinal);
+  
+
+});
+</script>
+
+</body>
+</html>
