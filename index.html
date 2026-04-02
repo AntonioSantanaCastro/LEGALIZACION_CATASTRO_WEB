@@ -155,32 +155,7 @@ font-size: 10px;
 <img src="imagenmanta.png" class="logo-manta">
 </div>
 
-<button onclick="verJSON2022()" style="
-position:fixed;
-top:10px;
-left:10px;
-z-index:3000;
-">
-Ver JSON 2022
-</button>
-
 <div id="mapa"></div>
-
-<!-- 👇 AQUÍ VA -->
-<div id="visorJSON" style="
-position:fixed;
-top:50px;
-left:50px;
-width:80%;
-height:70%;
-background:white;
-border:2px solid black;
-overflow:auto;
-z-index:3000;
-padding:10px;
-display:none;
-font-size:12px;
-"></div>
 
 
 <button id="btnAdmin" style="
@@ -220,54 +195,8 @@ Buscar Predio<br>
 
 </div>
 
-
 <script>
-function verJSON2022(){
 
-  if(!capa2022){
-    alert("⏳ Espera unos segundos, cargando datos 2021...");
-    return;
-  }
-
-  var datos = [];
-
-  capa2022.eachLayer(function(layer){
-    datos.push(layer.feature.properties);
-  });
-
-  if(datos.length === 0){
-    alert("⚠️ No hay datos en la capa 2021 aún");
-    return;
-  }
-
-  var visor = document.getElementById("visorJSON");
-  visor.style.display = "block";
-
-  var html = `
-    <h3>Datos Año 2022 (${datos.length} predios)</h3>
-    <button onclick="document.getElementById('visorJSON').style.display='none'">Cerrar</button>
-    <table border="1" style="border-collapse:collapse; font-size:11px;">
-    <tr>
-  `;
-
-  Object.keys(datos[0]).forEach(k=>{
-    html += `<th>${k}</th>`;
-  });
-
-  html += "</tr>";
-
-  datos.forEach(d=>{
-    html += "<tr>";
-    Object.values(d).forEach(v=>{
-      html += `<td>${v}</td>`;
-    });
-    html += "</tr>";
-  });
-
-  html += "</table>";
-
-  visor.innerHTML = html;
-}
 
 // ================= MODO ADMIN CORREGIDO =================
 
@@ -513,6 +442,7 @@ cargar("https://raw.githubusercontent.com/Antonio20252025/Catastro_Legalizacion/
 cargar("https://raw.githubusercontent.com/Antonio20252025/Catastro_Legalizacion/main/2024.geojson","sandybrown","Magenta","capa2024")
 cargar("https://raw.githubusercontent.com/Antonio20252025/Catastro_Legalizacion/main/2025.geojson","white","yellow","capa2025")
 
+
 // PARPADEO
 
 function activarParpadeo(){
@@ -631,8 +561,8 @@ function iniciarVoz(){
     var texto = event.results[0][0].transcript;
 	
 	console.log("Texto detectado:", texto); // 👈 AGREGA ESTO
-	
-	  // 👇 REEMPLAZOS PERSONALIZADOS
+
+	    // 👇 REEMPLAZOS PERSONALIZADOS
   texto = texto
     .replace(/raya/g, "-")
     .replace(/guion/g, "-")
@@ -643,6 +573,7 @@ function iniciarVoz(){
     .replace(/coma/g, ",")
     .replace(/espacio/g, " ")
     .replace(/guion bajo/g, "_");
+
 	
     // poner lo hablado en el input
     document.getElementById("textoBuscar").value = texto;
